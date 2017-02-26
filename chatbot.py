@@ -24,6 +24,8 @@ class Chatbot:
       self.name = 'moviebot'
       self.is_turbo = is_turbo
       self.read_data()
+      self.titles, self.ratings = ratings()
+      self.binarize()
 
     #############################################################################
     # 1. WARM UP REPL
@@ -97,8 +99,20 @@ class Chatbot:
 
     def binarize(self):
       """Modifies the ratings matrix to make all of the ratings binary"""
+      total = 0
+      count = 0
+      avg_rating = 0
+      for movie in self.ratings:
+          for rating in movie:
+            if rating != 0:
+                  total += rating
+                  count += 1
+      avg_rating = total / count
+      for movie_id, movie in enumerate(self.ratings):
+          for user_id, rating in enumerate(movie):
+            if rating != 0:
+                self.ratings[movie_id,user_id] = 1 if rating > avg_rating else -1
 
-      pass
 
 
     def distance(self, u, v):
