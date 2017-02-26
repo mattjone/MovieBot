@@ -8,55 +8,38 @@
 ######################################################################
 import csv
 import math
-
 import numpy as np
-
 from movielens import ratings
 from random import randint
+from PorterStemmer import PorterStemmer
+import re
+
 
 class Chatbot:
     """Simple class to implement the chatbot for PA 6."""
 
-    #############################################################################
-    # `moviebot` is the default chatbot. Change it to your chatbot's name       #
-    #############################################################################
+
     def __init__(self, is_turbo=False):
       self.name = 'moviebot'
       self.is_turbo = is_turbo
+      self.p = PorterStemmer()
       self.read_data()
-
-    #############################################################################
-    # 1. WARM UP REPL
-    #############################################################################
+      self.ratedMovieList = {}
 
     def greeting(self):
       """chatbot greeting message"""
-      #############################################################################
-      # TODO: Write a short greeting message                                      #
-      #############################################################################
-
       greeting_message = 'How can I help you?'
-      
-      #Matt Jones
 
-
-      #############################################################################
-      #                             END OF YOUR CODE                             #
-      #############################################################################
 
       return greeting_message
 
     def goodbye(self):
       """chatbot goodbye message"""
-      #############################################################################
-      # TODO: Write a short farewell message                                      #
-      #############################################################################
+
 
       goodbye_message = 'Have a nice day!'
 
-      #############################################################################
-      #                             END OF YOUR CODE                              #
-      #############################################################################
+
 
       return goodbye_message
 
@@ -76,10 +59,35 @@ class Chatbot:
       # calling other functions. Although modular code is not graded, it is       #
       # highly recommended                                                        #
       #############################################################################
-      if self.is_turbo == True:
-        response = 'processed %s in creative mode!!' % input
+      
+      if re.match('.*\"(.*)\".*', input) is not None:
+        movieName = re.match('.*\"(.*)\".*', input).group(1)
+        
+        if movieName not in self.ratedMovieList:
+        
+            if movieName in self.titlesOnly:
+                rating = 0
+            
+                for word in input.split():
+                    if self.p.stem(word) in self.sentiment:
+                        if self.sentiment[self.p.stem(word)] == "pos":
+                            rating += 1
+                        else:
+                            rating -= 1
+                if rating >= 1:
+                    rating = 1
+                elif rating < 0:
+                        rating = -1
+        
+                self.ratedMovieList[movieName] = rating
+                
+                response = "Thank you! Please tell me about another movie."
+            else:
+                response = "I'm sorry, I've never heard about that movie! Please tell me about another one."
+        else:
+            response = "Hey! You already told me about that movie. Tell me about a different one now."
       else:
-        response = 'processed %s in starter mode' % input
+        response = "I'm sorry, is that the right format? Please make sure the name of the movie is in quotation marks."
 
       return response
 
@@ -96,7 +104,13 @@ class Chatbot:
       self.titles, self.ratings = ratings()
       reader = csv.reader(open('data/sentiment.txt', 'rb'))
       self.sentiment = dict(reader)
-
+      
+      self.titlesOnly = []
+      
+      for entry in self.titles:
+            titleOnly = entry[0].split(' (')[0]
+            self.titlesOnly.append(titleOnly)
+      self.sentiment.update({self.p.stem(k): v for k, v in self.sentiment.items()})
 
     def binarize(self):
       """Modifies the ratings matrix to make all of the ratings binary"""
