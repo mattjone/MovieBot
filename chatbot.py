@@ -8,21 +8,21 @@
 ######################################################################
 import csv
 import math
-
 import numpy as np
-
 from movielens import ratings
 from random import randint
+from PorterStemmer import PorterStemmer
+import re
+
 
 class Chatbot:
     """Simple class to implement the chatbot for PA 6."""
 
-    #############################################################################
-    # `moviebot` is the default chatbot. Change it to your chatbot's name       #
-    #############################################################################
+
     def __init__(self, is_turbo=False):
       self.name = 'moviebot'
       self.is_turbo = is_turbo
+      self.p = PorterStemmer()
       self.read_data()
       self.titles, self.ratings = ratings()
       self.binarize()
@@ -30,35 +30,24 @@ class Chatbot:
     #############################################################################
     # 1. WARM UP REPL
     #############################################################################
+      self.ratedMovieList = {}
+      self.userRatingVector = np.zeros(len(self.titles))
+
 
     def greeting(self):
       """chatbot greeting message"""
-      #############################################################################
-      # TODO: Write a short greeting message                                      #
-      #############################################################################
-
       greeting_message = 'How can I help you?'
-      
-      #Matt Jones
 
-
-      #############################################################################
-      #                             END OF YOUR CODE                             #
-      #############################################################################
 
       return greeting_message
 
     def goodbye(self):
       """chatbot goodbye message"""
-      #############################################################################
-      # TODO: Write a short farewell message                                      #
-      #############################################################################
+
 
       goodbye_message = 'Have a nice day!'
 
-      #############################################################################
-      #                             END OF YOUR CODE                              #
-      #############################################################################
+
 
       return goodbye_message
 
@@ -78,10 +67,41 @@ class Chatbot:
       # calling other functions. Although modular code is not graded, it is       #
       # highly recommended                                                        #
       #############################################################################
-      if self.is_turbo == True:
-        response = 'processed %s in creative mode!!' % input
+
+      if re.match('.*\"(.*)\".*', input) is not None:
+        movieName = re.match('.*\"(.*)\".*', input).group(1)
+
+        if movieName not in self.ratedMovieList:
+
+            if movieName in self.titlesOnly:
+                rating = 0
+
+                for word in input.split():
+                    if self.p.stem(word) in self.sentiment:
+                        if self.sentiment[self.p.stem(word)] == "pos":
+                            rating += 1
+                        else:
+                            rating -= 1
+                if rating >= 1:
+                    rating = 1
+                elif rating < 0:
+                        rating = -1
+
+                self.ratedMovieList[movieName] = rating
+                self.userRatingVector[self.titlesOnly.index(movieName)] = rating
+
+                if len(self.ratedMovieList) >= 5:
+                    movieSet = self.recommend(self.userRatingVector)
+
+                    response = "I recommend:"
+                else:
+                    response = "Thank you! Please tell me about another movie."
+            else:
+                response = "I'm sorry, I've never heard about that movie! Please tell me about another one."
+        else:
+            response = "Hey! You already told me about that movie. Tell me about a different one now."
       else:
-        response = 'processed %s in starter mode' % input
+        response = "I'm sorry, is that the right format? Please make sure the name of the movie is in quotation marks."
 
       return response
 
@@ -99,6 +119,12 @@ class Chatbot:
       reader = csv.reader(open('data/sentiment.txt', 'rb'))
       self.sentiment = dict(reader)
 
+      self.titlesOnly = []
+
+      for entry in self.titles:
+            titleOnly = entry[0].split(' (')[0]
+            self.titlesOnly.append(titleOnly)
+      self.sentiment.update({self.p.stem(k): v for k, v in self.sentiment.items()})
 
     def binarize(self):
       """Modifies the ratings matrix to make all of the ratings binary"""
@@ -120,24 +146,36 @@ class Chatbot:
 
     def distance(self, u, v):
       """Calculates a given distance function between vectors u and v"""
-      # TODO: Implement the distance function between vectors u and v]
-      # Note: you can also think of this as computing a similarity measure
 
-      pass
+      meanU = numpy.mean(u)
+      meanV = numpy.mean(v)
 
+      for elementU,elementV in u,v:
+        numerator = numerator + ((elementU - meanU) * (elementV - meanV))
+        sumU = sumU + (elementU - meanU)^2
+        sumV = sumV + (elementV - meanV)^2
+
+      denominator = sqrt(sumU) * sqrt(sumV)
+
+      similarity = numerator/denominator
+      return similarity
 
     def recommend(self, u):
       """Generates a list of movies based on the input vector u using
       collaborative filtering"""
-      # TODO: Implement a recommendation function that takes a user vector u
-      # and outputs a list of movies recommended by the chatbot
+
+      sims = [] #similarities
+      recommendation = ""
+      topScore = None
+      for movie_id, rating in enumerate(u):
+          if rating != 0:
+              sims[movie_id] = []
+              for r_id, movie in self.ratings:
+                  sims[movie_id][r_id] = distance(movie,self.ratings[movie_id])
+                  
 
       pass
 
-
-    #############################################################################
-    # 4. Debug info                                                             #
-    #############################################################################
 
     def debug(self, input):
       """Returns debug information as a string for the input string from the REPL"""
