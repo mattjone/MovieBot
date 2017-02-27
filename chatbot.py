@@ -81,7 +81,13 @@ class Chatbot:
         
                 self.ratedMovieList[movieName] = rating
                 
-                response = "Thank you! Please tell me about another movie."
+                
+                if len(self.ratedMovieList) >= 5:
+                    movieSet = self.recommend(self.ratedMovieList)
+                    
+                    response = "I recommend:"
+                else:
+                    response = "Thank you! Please tell me about another movie."
             else:
                 response = "I'm sorry, I've never heard about that movie! Please tell me about another one."
         else:
@@ -120,24 +126,28 @@ class Chatbot:
 
     def distance(self, u, v):
       """Calculates a given distance function between vectors u and v"""
-      # TODO: Implement the distance function between vectors u and v]
-      # Note: you can also think of this as computing a similarity measure
-
-      pass
-
+      
+      meanU = numpy.mean(u)
+      meanV = numpy.mean(v)
+      
+      for elementU,elementV in u,v:
+        numerator = numerator + ((elementU - meanU) * (elementV - meanV))
+        sumU = sumU + (elementU - meanU)^2
+        sumV = sumV + (elementV - meanV)^2
+      
+      denominator = sqrt(sumU) * sqrt(sumV)
+      
+      similarity = numerator/denominator
 
     def recommend(self, u):
       """Generates a list of movies based on the input vector u using
       collaborative filtering"""
-      # TODO: Implement a recommendation function that takes a user vector u
-      # and outputs a list of movies recommended by the chatbot
+      
+      for
+      
 
       pass
 
-
-    #############################################################################
-    # 4. Debug info                                                             #
-    #############################################################################
 
     def debug(self, input):
       """Returns debug information as a string for the input string from the REPL"""
