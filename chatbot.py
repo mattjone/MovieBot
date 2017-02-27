@@ -13,6 +13,7 @@ from movielens import ratings
 from random import randint
 from PorterStemmer import PorterStemmer
 import re
+import itertools as it
 
 
 class Chatbot:
@@ -26,6 +27,8 @@ class Chatbot:
       self.read_data()
       self.titles, self.ratings = ratings()
       self.binarize()
+      self.recommendedMovies = []
+
 
     #############################################################################
     # 1. WARM UP REPL
@@ -91,9 +94,9 @@ class Chatbot:
                 self.userRatingVector[self.titlesOnly.index(movieName)] = rating
 
                 if len(self.ratedMovieList) >= 5:
-                    movieSet = self.recommend(self.userRatingVector)
+                    movieRec = self.recommend(self.userRatingVector)
 
-                    response = "I recommend:"
+                    response = "I recommend: %s" % movieRec
                 else:
                     response = "Thank you! Please tell me about another movie."
             else:
@@ -147,15 +150,18 @@ class Chatbot:
     def distance(self, u, v):
       """Calculates a given distance function between vectors u and v"""
 
-      meanU = numpy.mean(u)
-      meanV = numpy.mean(v)
+      meanU = np.mean(u)
+      meanV = np.mean(v)
+      numerator = 0
+      sumU = 0
+      sumV = 0
 
-      for elementU,elementV in u,v:
+      for elementU,elementV in it.izip(u,v):
         numerator = numerator + ((elementU - meanU) * (elementV - meanV))
-        sumU = sumU + (elementU - meanU)^2
-        sumV = sumV + (elementV - meanV)^2
+        sumU = sumU + (elementU - meanU)**2
+        sumV = sumV + (elementV - meanV)**2
 
-      denominator = sqrt(sumU) * sqrt(sumV)
+      denominator = math.sqrt(sumU) * math.sqrt(sumV)
 
       similarity = numerator/denominator
       return similarity
@@ -164,17 +170,31 @@ class Chatbot:
       """Generates a list of movies based on the input vector u using
       collaborative filtering"""
 
-      sims = [] #similarities
+      sims = {} #similarities
       recommendation = ""
       topScore = None
       for movie_id, rating in enumerate(u):
           if rating != 0:
-              sims[movie_id] = []
-              for r_id, movie in self.ratings:
-                  sims[movie_id][r_id] = distance(movie,self.ratings[movie_id])
-                  
+              sims[movie_id] = {}
+              for r_id, movie in enumerate(self.ratings):
+                #   print(movie)
+                #   print(self.ratings[movie_id])
+                #   exit()
+                  sims[movie_id][r_id] = self.distance(movie,self.ratings[movie_id])
 
-      pass
+      for i, movieRating in enumerate(self.ratings):
+          iPrediction = 0
+          for movieName in self.ratedMovieList:
+              j = self.titlesOnly.index(movieName)
+              iPrediction += sim[i][j] * self.userRatingVector[j]
+          if topScore is None or iPrediction > topScore:
+              movie = self.titlesOnly[i]
+              if movie not in self.ratedMovieList and movie not in self.recommendedMovies:
+                  recommendation = movie
+
+      self.recommendedMovies.append(recommendation)
+      return recommendation
+
 
 
     def debug(self, input):
