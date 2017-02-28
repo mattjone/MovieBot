@@ -149,21 +149,20 @@ class Chatbot:
 
     def distance(self, u, v):
       """Calculates a given distance function between vectors u and v"""
-
-      meanU = np.mean(u)
-      meanV = np.mean(v)
-      numerator = 0
-      sumU = 0
-      sumV = 0
+      numerator = 0.0
+      denominator = 0.0
+      sumU = 0.0
+      sumV = 0.0
 
       for elementU,elementV in it.izip(u,v):
-        numerator = numerator + ((elementU - meanU) * (elementV - meanV))
-        sumU = sumU + (elementU - meanU)**2
-        sumV = sumV + (elementV - meanV)**2
+        numerator = numerator + (elementU * elementV)
+        sumU = sumU + (elementU)**2
+        sumV = sumV + (elementV)**2
 
       denominator = math.sqrt(sumU) * math.sqrt(sumV)
-
-      similarity = numerator/denominator
+      
+      similarity = numerator/(denominator +1e-7)
+      
       return similarity
 
     def recommend(self, u):
@@ -186,7 +185,7 @@ class Chatbot:
           iPrediction = 0
           for movieName in self.ratedMovieList:
               j = self.titlesOnly.index(movieName)
-              iPrediction += sim[i][j] * self.userRatingVector[j]
+              iPrediction += sims[i][j] * self.userRatingVector[j]
           if topScore is None or iPrediction > topScore:
               movie = self.titlesOnly[i]
               if movie not in self.ratedMovieList and movie not in self.recommendedMovies:
