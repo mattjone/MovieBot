@@ -29,6 +29,7 @@ class REPL(cmd.Cmd):
     greeting = chatbot.greeting()
     intro = chatbot.intro() + '\n' + bot_prompt + greeting
     debug = False
+    test = False
 
     doc_header = ''
     misc_header = ''
@@ -78,6 +79,14 @@ class REPL(cmd.Cmd):
         print 'default(%s)' % line
       if line == ":quit":
         return True
+      elif self.test:
+          self.chatbot.process('I love "Toy Story"')
+          self.chatbot.process('I love "Pocahontas"')
+          self.chatbot.process('I love "Balto"')
+          self.chatbot.process('I love "Jumanji"')
+          response = self.chatbot.process('I love "Lion King, The"')
+          print self.bot_says(response)
+
       else:
         response = self.chatbot.process(line)
         print self.bot_says(response)
