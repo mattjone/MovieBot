@@ -71,35 +71,32 @@ class Chatbot:
       # calling other functions. Although modular code is not graded, it is       #
       # highly recommended                                                        #
       #############################################################################
+      if len(input) == 0:
+          return "It seems you meant to say something but forgot"
+      match = re.match('.*\"(.*)\".*', input)
+      if match is None:
+          match = re.match('.*([A-Z].*)', input)
+          if match is not None:
+              matchSubstr = match.group(1).lower()
+              splitSubStr = matchSubstr.split()
+              movieName = ""
+              for i in range(0,len(splitSubStr)):
+                  movieName = movieName + " " + splitSubStr[i]
+                  movieName = movieName.strip()
+                  if movieName in self.titlesOnly:
+                      input = self.removeTitle(movieName, input)
+                      return self.addRating(movieName, input)
 
-      if re.match('.*\"(.*)\".*', input) is not None:
-        movieName = re.match('.*\"(.*)\".*', input).group(1)
+          return "I'm sorry, is that the right format? Please make sure to include the name of the movie in quotation marks."
 
+      if match is not None:
+        movieName = match.group(1)
+        movieName = movieName.lower()
         if movieName not in self.ratedMovieList:
 
             if movieName in self.titlesOnly:
-                rating = 0
-
-                for word in input.split():
-                    if self.p.stem(word) in self.sentiment:
-                        if self.sentiment[self.p.stem(word)] == "pos":
-                            rating += 1
-                        else:
-                            rating -= 1
-                if rating >= 1:
-                    rating = 1
-                elif rating < 0:
-                        rating = -1
-
-                self.ratedMovieList[movieName] = rating
-                self.userRatingVector[self.titlesOnly.index(movieName)] = rating
-
-                if len(self.ratedMovieList) >= 5:
-                    movieRec = self.recommend(self.userRatingVector)
-
-                    response = "I recommend: %s" % movieRec
-                else:
-                    response = "Thank you! Please tell me about another movie."
+                input = self.removeTitle(movieName, input)
+                return self.addRating(movieName, input)
             else:
                 response = "I'm sorry, I've never heard about that movie! Please tell me about another one."
         else:
@@ -108,6 +105,39 @@ class Chatbot:
         response = "I'm sorry, is that the right format? Please make sure the name of the movie is in quotation marks."
 
       return response
+
+    def addRating(self, movieName, string):
+        rating = 0
+
+        for word in string.split():
+            if self.p.stem(word) in self.sentiment:
+                if self.sentiment[self.p.stem(word)] == "pos":
+                    rating += 1
+                else:
+                    rating -= 1
+
+        if rating >= 1:
+            rating = 1
+        elif rating < 0:
+            rating = -1
+
+        self.ratedMovieList[movieName] = rating
+        self.userRatingVector[self.titlesOnly.index(movieName)] = rating
+
+        if len(self.ratedMovieList) >= 5:
+            movieRec = self.recommend(self.userRatingVector).title()
+            response = "I think you should check out %s!" % movieRec
+        else:
+            response = "Thank you! Please tell me about another movie."
+        return response
+
+    def removeTitle(self, movieName, input):
+        movieSplit = movieName.split()
+        inputSplit = input.lower().split()
+        for word in movieSplit: #remove the movie title from the words
+            if word in inputSplit: inputSplit.remove(word)
+        input = " ".join(inputSplit)
+        return input
 
 
     #############################################################################
@@ -127,7 +157,7 @@ class Chatbot:
 
       for entry in self.titles:
             titleOnly = entry[0].split(' (')[0]
-            self.titlesOnly.append(titleOnly)
+            self.titlesOnly.append(titleOnly.lower())
       self.sentiment.update({self.p.stem(k): v for k, v in self.sentiment.items()})
 
     def binarize(self):
@@ -158,7 +188,9 @@ class Chatbot:
     def recommend(self, u):
       """Generates a list of movies based on the input vector u using
       collaborative filtering"""
-
+    #   print(u)
+    #   print(len(u))
+    #   exit()
       sims = {} #similarities
       recommendation = ""
       topScore = None
@@ -175,7 +207,8 @@ class Chatbot:
           iPrediction = 0
           for movieName in self.ratedMovieList:
               j = self.titlesOnly.index(movieName)
-            #   print("%s is id %d" % (movieName, j))
+            #   sims[j][i]*1.0
+            #   print("movies are %s and %s" % (self.titlesOnly[i], movieName))
             #   print("similarity between %s and %s is %.5f" % (self.titlesOnly[i], movieName, sims[j][i]))
               iPrediction += sims[j][i]*1.0 * self.userRatingVector[j]
             #   print("sims[j][i] is %.5f" % sims[j][i])
@@ -184,7 +217,7 @@ class Chatbot:
           if topScore is None or iPrediction > topScore:
               movie = self.titlesOnly[i]
               if movie not in self.ratedMovieList and movie not in self.recommendedMovies:
-                  print("prediction score for %s is %.5f" % (movie, iPrediction))
+                #   print("prediction score for %s is %.5f" % (movie, iPrediction))
                   topScore = iPrediction
                   recommendation = movie
     #   print time.time() - start, "recommendation time"
