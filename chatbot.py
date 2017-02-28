@@ -150,21 +150,9 @@ class Chatbot:
 
     def distance(self, u, v):
       """Calculates a given distance function between vectors u and v"""
-      numerator = 0.0
-      denominator = 0.0
-    #   sumU = 0.0
-    #   sumV = 0.0
       numerator = np.dot(u,v)
       denominator = np.linalg.norm(u) * np.linalg.norm(v)
-    #   for elementU,elementV in it.izip(u,v):
-    #     # numerator = numerator + (elementU * elementV)
-    #     sumU = sumU + (elementU)**2
-    #     sumV = sumV + (elementV)**2
-    #
-    #   denominator = math.sqrt(sumU) * math.sqrt(sumV)
-
       similarity = numerator/(denominator +1e-7)
-
       return similarity
 
     def recommend(self, u):
