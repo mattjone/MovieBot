@@ -80,11 +80,11 @@ class REPL(cmd.Cmd):
       if line == ":quit":
         return True
       elif self.test:
-          self.chatbot.process('I love "Toy Story"')
+          self.chatbot.process('I love Toy Story')
           self.chatbot.process('I love "Pocahontas"')
-          self.chatbot.process('I love "Balto"')
-          self.chatbot.process('I love "Jumanji"')
-          response = self.chatbot.process('I love "Lion King, The"')
+          self.chatbot.process('I love "balto"')
+          self.chatbot.process('I love "Lion King, The"')
+          response = self.chatbot.process('I love "jumanji"')
           print self.bot_says(response)
 
       else:
