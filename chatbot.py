@@ -14,6 +14,7 @@ from random import randint
 from PorterStemmer import PorterStemmer
 import re
 import itertools as it
+import time
 
 
 class Chatbot:
@@ -25,7 +26,7 @@ class Chatbot:
       self.is_turbo = is_turbo
       self.p = PorterStemmer()
       self.read_data()
-      self.titles, self.ratings = ratings()
+    #   self.titles, self.ratings = ratings()
       self.binarize()
       self.recommendedMovies = []
 
@@ -149,20 +150,9 @@ class Chatbot:
 
     def distance(self, u, v):
       """Calculates a given distance function between vectors u and v"""
-      numerator = 0.0
-      denominator = 0.0
-      sumU = 0.0
-      sumV = 0.0
-
-      for elementU,elementV in it.izip(u,v):
-        numerator = numerator + (elementU * elementV)
-        sumU = sumU + (elementU)**2
-        sumV = sumV + (elementV)**2
-
-      denominator = math.sqrt(sumU) * math.sqrt(sumV)
-      
+      numerator = np.dot(u,v)
+      denominator = np.linalg.norm(u) * np.linalg.norm(v)
       similarity = numerator/(denominator +1e-7)
-      
       return similarity
 
     def recommend(self, u):
@@ -172,25 +162,32 @@ class Chatbot:
       sims = {} #similarities
       recommendation = ""
       topScore = None
+      start = time.time()
       for movie_id, rating in enumerate(u):
           if rating != 0:
               sims[movie_id] = {}
               for r_id, movie in enumerate(self.ratings):
-                #   print(movie)
-                #   print(self.ratings[movie_id])
-                #   exit()
                   sims[movie_id][r_id] = self.distance(movie,self.ratings[movie_id])
+    #   print time.time() - start, "distance time"
 
+      start = time.time()
       for i, movieRating in enumerate(self.ratings):
           iPrediction = 0
           for movieName in self.ratedMovieList:
               j = self.titlesOnly.index(movieName)
-              iPrediction += sims[i][j] * self.userRatingVector[j]
+            #   print("%s is id %d" % (movieName, j))
+            #   print("similarity between %s and %s is %.5f" % (self.titlesOnly[i], movieName, sims[j][i]))
+              iPrediction += sims[j][i]*1.0 * self.userRatingVector[j]
+            #   print("sims[j][i] is %.5f" % sims[j][i])
+            #   print("self.userRatingVector[j]*1.0 is %d" % self.userRatingVector[j])
+            #   print("iPrediction is %.5f" % iPrediction)
           if topScore is None or iPrediction > topScore:
               movie = self.titlesOnly[i]
               if movie not in self.ratedMovieList and movie not in self.recommendedMovies:
+                  print("prediction score for %s is %.5f" % (movie, iPrediction))
+                  topScore = iPrediction
                   recommendation = movie
-
+    #   print time.time() - start, "recommendation time"
       self.recommendedMovies.append(recommendation)
       return recommendation
 
