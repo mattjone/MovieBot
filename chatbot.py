@@ -168,7 +168,7 @@ class Chatbot:
               sims[movie_id] = {}
               for r_id, movie in enumerate(self.ratings):
                   sims[movie_id][r_id] = self.distance(movie,self.ratings[movie_id])
-      print time.time() - start, "distance time"
+    #   print time.time() - start, "distance time"
 
       start = time.time()
       for i, movieRating in enumerate(self.ratings):
@@ -187,7 +187,7 @@ class Chatbot:
                   print("prediction score for %s is %.5f" % (movie, iPrediction))
                   topScore = iPrediction
                   recommendation = movie
-      print time.time() - start, "recommendation time"
+    #   print time.time() - start, "recommendation time"
       self.recommendedMovies.append(recommendation)
       return recommendation
 
