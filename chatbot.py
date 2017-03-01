@@ -31,13 +31,13 @@ class Chatbot:
       self.binarize()
       self.RecommendationStrings = ["I think you should check out %s! ", "This movie will blow your mind: %s. ", "Watch %s. It will ruin all other movies for you. "]
 
-
-    #############################################################################
-    # 1. WARM UP REPL
-    #############################################################################
       self.ratedMovieList = {}
       self.userRatingVector = np.zeros(len(self.titles))
       self.recommendedMovies = []
+    
+      self.inTheMiddleOfSentimentAnalysis = False
+      self.currentMovieForMoreInformation = ""
+
 
     def greeting(self):
       """chatbot greeting message"""
@@ -81,14 +81,16 @@ class Chatbot:
           return "It seems you meant to say something but forgot"
       
       if len(self.recommendedMovies) > 0:
-          if input == ":quit":
-            return goodbye()
-          else:
             movieRec = self.recommend(self.userRatingVector).title()
             response = random.choice(self.RecommendationStrings) % movieRec + " Tap any key to hear another recommendation. (Or enter :quit if you're done.)"
             return response
+      
+      if self.inTheMiddleOfSentimentAnalysis:
+            self.inTheMiddleOfSentimentAnalysis = False
+            response = self.addRating(self.currentMovieForMoreInformation, input)
+            return response
     
-      match = re.match('.*\"(The|A|An|El|La)* *([\w ]*)( \(.*\)*)*\".*', input)
+      match = re.match('.*\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\".*', input)
       if match is None:
           match = re.match('.*([A-Z].*)', input)
           if match is not None:
@@ -142,8 +144,11 @@ class Chatbot:
         elif rating < 0:
             rating = -1
         
-        if rating = 0:
-            return "
+        if rating == 0:
+            self.inTheMiddleOfSentimentAnalysis = True
+            self.currentMovieForMoreInformation = movieName
+            response = movieName.title() + "! I didn't understand if you liked it or not. Tell me more."
+            return response
 
         self.ratedMovieList[movieName] = rating
         self.userRatingVector[self.titlesOnly.index(movieName)] = rating
