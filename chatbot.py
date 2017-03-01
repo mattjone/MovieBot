@@ -130,20 +130,26 @@ class Chatbot:
     def addRating(self, movieName, string):
         rating = 0
         MoreMoviesStrings = ["Thank you! Please tell me about another movie.", "Whooo making progress. Give me another one.", "Just a few more movies and I will blow your mind with a recommendation. Give me one more."]
-
+        NegationWords = ["didn't", "never", "not", "don't", "none", "not", "nobody"]
+        ReverseBoolean = 1
 
         for word in string.split():
+            if word in NegationWords:
+                ReverseBoolean = -1
             if self.p.stem(word) in self.sentiment:
                 if self.sentiment[self.p.stem(word)] == "pos":
-                    rating += 1
+                    rating += (1 * ReverseBoolean)
                 else:
-                    rating -= 1
+                    rating -= (1 * ReverseBoolean)
+                ReverseBoolean = 1
 
         if rating >= 1:
             rating = 1
         elif rating < 0:
             rating = -1
         
+        print rating
+
         if rating == 0:
             self.inTheMiddleOfSentimentAnalysis = True
             self.currentMovieForMoreInformation = movieName
