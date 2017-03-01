@@ -15,6 +15,7 @@ from PorterStemmer import PorterStemmer
 import re
 import itertools as it
 import time
+import random
 
 
 class Chatbot:
@@ -40,7 +41,11 @@ class Chatbot:
 
     def greeting(self):
       """chatbot greeting message"""
-      greeting_message = 'How can I help you?'
+      
+      HelloStrings = ['How can I help you?']
+      GoodbyeStrings = ['Have a nice day!']
+      
+      greeting_message = random.choice(HelloStrings)
 
 
       return greeting_message
@@ -49,7 +54,7 @@ class Chatbot:
       """chatbot goodbye message"""
 
 
-      goodbye_message = 'Have a nice day!'
+      goodbye_message = random.choice(GoodbyeStrings)
 
 
 
@@ -66,14 +71,17 @@ class Chatbot:
         1) extract the relevant information and
         2) transform the information into a response to the user
       """
-      #############################################################################
-      # TODO: Implement the extraction and transformation in this method, possibly#
-      # calling other functions. Although modular code is not graded, it is       #
-      # highly recommended                                                        #
-      #############################################################################
+      
+     WrongFormatStrings = ["I'm sorry, is that the right format? Please make sure to include the name of the movie in quotation marks."]
+     UnknownMovieStrings = ["I'm sorry, I've never heard about that movie! Please tell me about another one."]
+     SameMovieStrings = ["Hey! You already told me about that movie. Tell me about a different one now."]
+     MoreMoviesStrings = ["Thank you! Please tell me about another movie."]
+     RecommendationStrings = ["I think you should check out %s!"]
+    
+    
       if len(input) == 0:
           return "It seems you meant to say something but forgot"
-      match = re.match('.*\"(.*)\".*', input)
+      match = re.match('.*\"(The|A|An|El|La)* *([\w ]*)( \(.*\)*)*\".*', input)
       if match is None:
           match = re.match('.*([A-Z].*)', input)
           if match is not None:
@@ -83,14 +91,18 @@ class Chatbot:
               for i in range(0,len(splitSubStr)):
                   movieName = movieName + " " + splitSubStr[i]
                   movieName = movieName.strip()
+                  print movieName
                   if movieName in self.titlesOnly:
                       input = self.removeTitle(movieName, input)
                       return self.addRating(movieName, input)
 
-          return "I'm sorry, is that the right format? Please make sure to include the name of the movie in quotation marks."
+          return random.choice(WrongFormatStrings)
 
       if match is not None:
-        movieName = match.group(1)
+        if match.group(1):
+            movieName = match.group(2) + ", " + match.group(1)
+        else:
+            movieName = match.group(2)
         movieName = movieName.lower()
         if movieName not in self.ratedMovieList:
 
@@ -98,11 +110,11 @@ class Chatbot:
                 input = self.removeTitle(movieName, input)
                 return self.addRating(movieName, input)
             else:
-                response = "I'm sorry, I've never heard about that movie! Please tell me about another one."
+                response = random.choice(UnknownMovieStrings)
         else:
-            response = "Hey! You already told me about that movie. Tell me about a different one now."
+            response = random.choice(SameMovieStrings)
       else:
-        response = "I'm sorry, is that the right format? Please make sure the name of the movie is in quotation marks."
+        response = random.choice(WrongFormatStrings)
 
       return response
 
@@ -126,9 +138,9 @@ class Chatbot:
 
         if len(self.ratedMovieList) >= 5:
             movieRec = self.recommend(self.userRatingVector).title()
-            response = "I think you should check out %s!" % movieRec
+            response = random.choice(RecommendationStrings) % movieRec
         else:
-            response = "Thank you! Please tell me about another movie."
+            response = random.choice(MoreMoviesStrings)
         return response
 
     def removeTitle(self, movieName, input):
