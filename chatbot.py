@@ -29,7 +29,7 @@ class Chatbot:
       self.read_data()
     #   self.titles, self.ratings = ratings()
       self.binarize()
-      self.recommendedMovies = []
+      self.RecommendationStrings = ["I think you should check out %s! ", "This movie will blow your mind: %s. ", "Watch %s. It will ruin all other movies for you. "]
 
 
     #############################################################################
@@ -37,13 +37,13 @@ class Chatbot:
     #############################################################################
       self.ratedMovieList = {}
       self.userRatingVector = np.zeros(len(self.titles))
-
+      self.recommendedMovies = []
 
     def greeting(self):
       """chatbot greeting message"""
       
-      HelloStrings = ['How can I help you?']
-      GoodbyeStrings = ['Have a nice day!']
+      HelloStrings = ["How can I help you?","Hey there! It's so nice to meet you.","What's up dude!"]
+      GoodbyeStrings = ["Have a nice day!","I'm going to miss you.", "Am gonna be in my room crying until I see you again"]
       
       greeting_message = random.choice(HelloStrings)
 
@@ -72,15 +72,22 @@ class Chatbot:
         2) transform the information into a response to the user
       """
       
-     WrongFormatStrings = ["I'm sorry, is that the right format? Please make sure to include the name of the movie in quotation marks."]
-     UnknownMovieStrings = ["I'm sorry, I've never heard about that movie! Please tell me about another one."]
-     SameMovieStrings = ["Hey! You already told me about that movie. Tell me about a different one now."]
-     MoreMoviesStrings = ["Thank you! Please tell me about another movie."]
-     RecommendationStrings = ["I think you should check out %s!"]
+      WrongFormatStrings = ["I'm sorry, is that the right format? Please make sure to include the name of the movie in quotation marks.","Whoaaa, can you please make sure you use quotation marks?","Quotation marks around the movie, buddy. Please and thank you."]
+      UnknownMovieStrings = ["I'm sorry, I've never heard about that movie! Please tell me about another one.","Is that some random indie film? Never heard of it!","Man, I really need to get back to the cinema. Never heard of that movie..."]
+      SameMovieStrings = ["Hey! You already told me about that movie. Tell me about a different one now.", "Come on man, pick a NEW movie!", "Have you only watched 1 movie in your entire life? Pick a new one, please"]
     
     
       if len(input) == 0:
           return "It seems you meant to say something but forgot"
+      
+      if len(self.recommendedMovies) > 0:
+          if input == ":quit":
+            return goodbye()
+          else:
+            movieRec = self.recommend(self.userRatingVector).title()
+            response = random.choice(self.RecommendationStrings) % movieRec + " Tap any key to hear another recommendation. (Or enter :quit if you're done.)"
+            return response
+    
       match = re.match('.*\"(The|A|An|El|La)* *([\w ]*)( \(.*\)*)*\".*', input)
       if match is None:
           match = re.match('.*([A-Z].*)', input)
@@ -120,6 +127,8 @@ class Chatbot:
 
     def addRating(self, movieName, string):
         rating = 0
+        MoreMoviesStrings = ["Thank you! Please tell me about another movie.", "Whooo making progress. Give me another one.", "Just a few more movies and I will blow your mind with a recommendation. Give me one more."]
+
 
         for word in string.split():
             if self.p.stem(word) in self.sentiment:
@@ -132,13 +141,16 @@ class Chatbot:
             rating = 1
         elif rating < 0:
             rating = -1
+        
+        if rating = 0:
+            return "
 
         self.ratedMovieList[movieName] = rating
         self.userRatingVector[self.titlesOnly.index(movieName)] = rating
 
         if len(self.ratedMovieList) >= 5:
             movieRec = self.recommend(self.userRatingVector).title()
-            response = random.choice(RecommendationStrings) % movieRec
+            response = random.choice(self.RecommendationStrings) % movieRec + " Tap any key to hear another recommendation. (Or enter :quit if you're done.)"
         else:
             response = random.choice(MoreMoviesStrings)
         return response
