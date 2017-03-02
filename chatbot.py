@@ -76,7 +76,6 @@ class Chatbot:
       UnknownMovieStrings = ["I'm sorry, I've never heard about that movie! Please tell me about another one.","Is that some random indie film? Never heard of it!","Man, I really need to get back to the cinema. Never heard of that movie..."]
       SameMovieStrings = ["Hey! You already told me about that movie. Tell me about a different one now.", "Come on man, pick a NEW movie!", "Have you only watched 1 movie in your entire life? Pick a new one, please"]
     
-    
       if len(input) == 0:
           return "It seems you meant to say something but forgot"
       
@@ -90,6 +89,7 @@ class Chatbot:
             response = self.addRating(self.currentMovieForMoreInformation, input)
             return response
     
+    #Explaining this regex - checks if there are articles, checks for the year, repeats it all twice
       match = re.match('.*\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\".*', input)
       if match is None:
           match = re.match('.*([A-Z].*)', input)
@@ -100,7 +100,6 @@ class Chatbot:
               for i in range(0,len(splitSubStr)):
                   movieName = movieName + " " + splitSubStr[i]
                   movieName = movieName.strip()
-                  print movieName
                   if movieName in self.titlesOnly:
                       input = self.removeTitle(movieName, input)
                       return self.addRating(movieName, input)
@@ -131,25 +130,50 @@ class Chatbot:
         rating = 0
         MoreMoviesStrings = ["Thank you! Please tell me about another movie.", "Whooo making progress. Give me another one.", "Just a few more movies and I will blow your mind with a recommendation. Give me one more."]
         NegationWords = ["didn't", "never", "not", "don't", "none", "not", "nobody"]
+
+        strongPositive = ["love", "adore", "favorite", "amazing", "incredible", "fantastic"]
+        strongNegative = ["awful", "terrible", "hate"]
+        strongIntensifiers = ["really", "very", "extremely"]
+        
+        strongPositiveBoolean = False
+        strongNegativeBoolean = False
+        strongIntensifierBoolean = False
+
         ReverseBoolean = 1
+        
 
         for word in string.split():
             if word in NegationWords:
                 ReverseBoolean = -1
+            if word in strongPositive:
+                strongPositiveBoolean = True
+            if word in strongNegative:
+                strongNegativeBoolean = True
+            if word in strongIntensifiers:
+                strongIntensifierBoolean = True
+            
             if self.p.stem(word) in self.sentiment:
                 if self.sentiment[self.p.stem(word)] == "pos":
                     rating += (1 * ReverseBoolean)
+                
+                    if strongIntensifierBoolean:
+                        strongPositiveBoolean = True
+                        strongIntensifierBoolean = False
                 else:
                     rating -= (1 * ReverseBoolean)
+                    
+                    if strongIntensifiers:
+                        strongNegativeBoolean = True
+                        strongIntensifierBoolean = False
                 ReverseBoolean = 1
-
+                    
         if rating >= 1:
             rating = 1
+            strongNegativeBoolean = False
         elif rating < 0:
             rating = -1
+            strongPositiveBoolean = False
         
-        print rating
-
         if rating == 0:
             self.inTheMiddleOfSentimentAnalysis = True
             self.currentMovieForMoreInformation = movieName
@@ -163,7 +187,13 @@ class Chatbot:
             movieRec = self.recommend(self.userRatingVector).title()
             response = random.choice(self.RecommendationStrings) % movieRec + " Tap any key to hear another recommendation. (Or enter :quit if you're done.)"
         else:
-            response = random.choice(MoreMoviesStrings)
+            if strongPositiveBoolean == True and strongNegativeBoolean == False:
+                response = "Whoa, you really liked that one, huh? Give me another one. "
+            elif strongNegativeBoolean == True and strongPositiveBoolean == False:
+                response = "Wow, that bad, huh? Give me another one. "
+            else:
+                response = random.choice(MoreMoviesStrings)
+
         return response
 
     def removeTitle(self, movieName, input):
