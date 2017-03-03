@@ -42,15 +42,15 @@ class Chatbot:
       self.currentConjunction = ""
       self.sentimentOfPreviousMovie = 0
       self.check = {}
-      self.distanceThreshold = 5
+      self.distanceThreshold = 10
       self.confirm = False
       self.previousInput = ""
 
     def greeting(self):
       """chatbot greeting message"""
 
-      HelloStrings = ["How can I help you?","Hey there! It's so nice to meet you.","What's up dude!"]
-      GoodbyeStrings = ["Have a nice day!","I'm going to miss you.", "Am gonna be in my room crying until I see you again"]
+      HelloStrings = ["How can I help you?","Hey there! It's so nice to meet you. I'd love to hear what you thought of a few movies!","What's up? Tell me about some movies you've seen!"]
+      GoodbyeStrings = ["Have a nice day!","I'm going to miss you.", "Am gonna be in my room crying until I see you again."]
 
       greeting_message = random.choice(HelloStrings)
 
@@ -59,7 +59,7 @@ class Chatbot:
 
     def goodbye(self):
       """chatbot goodbye message"""
-      GoodbyeStrings = ["Have a nice day!","I'm going to miss you.", "Am gonna be in my room crying until I see you again"]
+      GoodbyeStrings = ["Have a nice day!","I'm going to miss you.", "Am gonna be in my room crying until I see you again."]
 
       goodbye_message = random.choice(GoodbyeStrings)
 
@@ -88,7 +88,7 @@ class Chatbot:
 
       if len(self.recommendedMovies) > 0:
             movieRec = self.recommend(self.userRatingVector).title()
-            response = random.choice(self.RecommendationStrings) % movieRec + " Tap any key to hear another recommendation. (Or enter :quit if you're done.)"
+            response = random.choice(self.RecommendationStrings) % movieRec + "Enter any key to hear another recommendation. (Or enter :quit if you're done.)"
             return response
 
       if self.inTheMiddleOfSentimentAnalysis:
@@ -98,7 +98,7 @@ class Chatbot:
 
       if self.confirm:
           self.confirm = False
-          match = re.match("yep|yea|yes|y$|Yep|Yea|Yes|Y$",input)
+          match = re.match("yep|yea|yes|y *$|Yep|Yea|Yes|Y *$",input)
           if match is None:
               return random.choice(ConfusedStrings)
           else:
@@ -145,7 +145,7 @@ class Chatbot:
 
       match = re.match('.*\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\".*', input)
       if match is None:
-          match = re.match('[^A-Z]*([A-Z].*)', input)
+          match = re.match('(?:I )?[^A-Z]*([A-Z].*)', input)
           if match is not None:
               matchSubstr = match.group(1).lower()
               splitSubStr = matchSubstr.split()
@@ -315,18 +315,15 @@ class Chatbot:
         minDist = None
         potentialMovie = None
         for i, title in enumerate(self.titlesOnly):
-            if math.fabs(len(string) - len(title)) < 3:
+            if math.fabs(len(string) - len(title)) < 4:
                 strSet = set(string)
                 titleSet = set(title)
-                if len(strSet - titleSet) > 2 or len(titleSet - strSet) > 2: continue
+                if len(strSet - titleSet) > 3 or len(titleSet - strSet) > 2: continue
                 self.check = {}
                 dist = self.minimumEditDistance("zero",string, title)
                 if (minDist is None or dist < minDist) and dist < self.distanceThreshold:
                     minDist = dist
                     potentialMovie = title
-                    # print potentialMovie
-                    # print minDist
-        print time.time() - start, "edit distance time"
         return potentialMovie
 
 
@@ -372,9 +369,7 @@ class Chatbot:
     def recommend(self, u):
       """Generates a list of movies based on the input vector u using
       collaborative filtering"""
-    #   print(u)
-    #   print(len(u))
-    #   exit()
+
       sims = {} #similarities
       recommendation = ""
       topScore = None
@@ -391,13 +386,7 @@ class Chatbot:
           iPrediction = 0
           for movieName in self.ratedMovieList:
               j = self.titlesOnly.index(movieName)
-            #   sims[j][i]*1.0
-            #   print("movies are %s and %s" % (self.titlesOnly[i], movieName))
-            #   print("similarity between %s and %s is %.5f" % (self.titlesOnly[i], movieName, sims[j][i]))
               iPrediction += sims[j][i]*1.0 * self.userRatingVector[j]
-            #   print("sims[j][i] is %.5f" % sims[j][i])
-            #   print("self.userRatingVector[j]*1.0 is %d" % self.userRatingVector[j])
-            #   print("iPrediction is %.5f" % iPrediction)
           if topScore is None or iPrediction > topScore:
               movie = self.titlesOnly[i]
               if movie not in self.ratedMovieList and movie not in self.recommendedMovies:
@@ -406,6 +395,11 @@ class Chatbot:
                   recommendation = movie
     #   print time.time() - start, "recommendation time"
       self.recommendedMovies.append(recommendation)
+
+      articlePattern = re.match('(.*), (the|a|an|el|la)', recommendation)
+      if articlePattern is not None:
+          recommendation = articlePattern.group(2) + " " + articlePattern.group(1)
+
       return recommendation
 
 
@@ -423,10 +417,17 @@ class Chatbot:
     #############################################################################
     def intro(self):
       return """
-      Your task is to implement the chatbot as detailed in the PA6 instructions.
-      Remember: in the starter mode, movie names will come in quotation marks and
-      expressions of sentiment will be simple!
-      Write here the description for your own chatbot!
+      Welcome to our MovieBot! A couple of things to help you out in the processs of using
+      it:
+        - The only difference between Starter and Creative Modes is Creative mode supports
+          Arbitrary Input responses. All other features are supported in Start mode!
+        - We implemented the following Creative Mode features:
+            - Identifying movies without quotation marks or perfect capitalization
+            - Fine-grained sentiment extraction
+            - Spell-checking movie titles
+            - Extracting sentiment with multiple-movie input
+            - Responding to arbitrary input
+      Enjoy!
       """
 
 
