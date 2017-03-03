@@ -37,13 +37,15 @@ class Chatbot:
     
       self.inTheMiddleOfSentimentAnalysis = False
       self.currentMovieForMoreInformation = ""
-
+      
+      self.TwoMoviesBoolean = False
+      self.currentConjunction = ""
+      self.sentimentOfPreviousMovie = 0
 
     def greeting(self):
       """chatbot greeting message"""
       
       HelloStrings = ["How can I help you?","Hey there! It's so nice to meet you.","What's up dude!"]
-      GoodbyeStrings = ["Have a nice day!","I'm going to miss you.", "Am gonna be in my room crying until I see you again"]
       
       greeting_message = random.choice(HelloStrings)
 
@@ -52,20 +54,15 @@ class Chatbot:
 
     def goodbye(self):
       """chatbot goodbye message"""
-
+      GoodbyeStrings = ["Have a nice day!","I'm going to miss you.", "Am gonna be in my room crying until I see you again"]
 
       goodbye_message = random.choice(GoodbyeStrings)
 
-
-
       return goodbye_message
 
-
-    #############################################################################
-    # 2. Modules 2 and 3: extraction and transformation                         #
-    #############################################################################
-
     def process(self, input):
+      self.TwoMoviesBoolean = False
+      self.sentimentOfPreviousMovie = 0
       """Takes the input string from the REPL and call delegated functions
       that
         1) extract the relevant information and
@@ -75,7 +72,7 @@ class Chatbot:
       WrongFormatStrings = ["I'm sorry, is that the right format? Please make sure to include the name of the movie in quotation marks.","Whoaaa, can you please make sure you use quotation marks?","Quotation marks around the movie, buddy. Please and thank you."]
       UnknownMovieStrings = ["I'm sorry, I've never heard about that movie! Please tell me about another one.","Is that some random indie film? Never heard of it!","Man, I really need to get back to the cinema. Never heard of that movie..."]
       SameMovieStrings = ["Hey! You already told me about that movie. Tell me about a different one now.", "Come on man, pick a NEW movie!", "Have you only watched 1 movie in your entire life? Pick a new one, please"]
-    
+      
       if len(input) == 0:
           return "It seems you meant to say something but forgot"
       
@@ -90,6 +87,42 @@ class Chatbot:
             return response
     
     #Explaining this regex - checks if there are articles, checks for the year, repeats it all twice
+    
+      matchDouble = re.match('(.*)\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\"(.*) (and|or|but|yet|neither|either|so)\,* (.*)\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\"(.*)',input)
+      if matchDouble is not None:
+        if matchDouble.group(2):
+            movie1Name = matchDouble.group(3) + ", " + matchDouble.group(2)
+        else:
+            movie1Name = matchDouble.group(3)
+        
+        if matchDouble.group(8):
+            movie2Name = matchDouble.group(9) + ", " + matchDouble.group(8)
+        else:
+            movie2Name = matchDouble.group(9)
+
+        movie1Name = movie1Name.lower()
+        movie2Name = movie2Name.lower()
+
+        if (movie1Name not in self.ratedMovieList) and (movie2Name not in self.ratedMovieList) :
+            if (movie1Name in self.titlesOnly) and (movie2Name in self.titlesOnly):
+                
+                self.currentConjunction = matchDouble.group(6)
+                self.TwoMoviesBoolean = True
+                
+                input1 = matchDouble.group(1) + " " + matchDouble.group(5)
+                input2 = matchDouble.group(7) + " " + matchDouble.group(11)
+                
+                response1 = self.addRating(movie1Name, input1)
+                response2 = self.addRating(movie2Name, input2)
+                
+                return (response1 + "\n" + response2)
+            else:
+                response = random.choice(UnknownMovieStrings)
+                return response
+        else:
+            response = random.choice(SameMovieStrings)
+            return response
+    
       match = re.match('.*\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\".*', input)
       if match is None:
           match = re.match('.*([A-Z].*)', input)
@@ -135,6 +168,9 @@ class Chatbot:
         strongNegative = ["awful", "terrible", "hate"]
         strongIntensifiers = ["really", "very", "extremely"]
         
+        confirmingConjunctionList = ["and", "or", "neither", "either", "so"]
+        opposingConjunctionList = ["but","yet"]
+        
         strongPositiveBoolean = False
         strongNegativeBoolean = False
         strongIntensifierBoolean = False
@@ -174,11 +210,20 @@ class Chatbot:
             rating = -1
             strongPositiveBoolean = False
         
+        if self.TwoMoviesBoolean and self.sentimentOfPreviousMovie == 0:
+            self.sentimentOfPreviousMovie = rating
+        
         if rating == 0:
-            self.inTheMiddleOfSentimentAnalysis = True
-            self.currentMovieForMoreInformation = movieName
-            response = movieName.title() + "! I didn't understand if you liked it or not. Tell me more."
-            return response
+            if self.TwoMoviesBoolean:
+                if self.currentConjunction in confirmingConjunctionList:
+                    rating = self.sentimentOfPreviousMovie
+                elif self.currentConjunction in opposingConjunctionList:
+                    rating = -1 * self.sentimentOfPreviousMovie
+            else:
+                self.inTheMiddleOfSentimentAnalysis = True
+                self.currentMovieForMoreInformation = movieName
+                response = movieName.title() + "! I didn't understand if you liked it or not. Tell me more."
+                return response
 
         self.ratedMovieList[movieName] = rating
         self.userRatingVector[self.titlesOnly.index(movieName)] = rating
