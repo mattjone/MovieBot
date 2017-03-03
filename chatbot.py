@@ -34,19 +34,24 @@ class Chatbot:
       self.ratedMovieList = {}
       self.userRatingVector = np.zeros(len(self.titles))
       self.recommendedMovies = []
-    
+
       self.inTheMiddleOfSentimentAnalysis = False
       self.currentMovieForMoreInformation = ""
-      
+
       self.TwoMoviesBoolean = False
       self.currentConjunction = ""
       self.sentimentOfPreviousMovie = 0
+      self.check = {}
+      self.distanceThreshold = 5
+      self.confirm = False
+      self.previousInput = ""
 
     def greeting(self):
       """chatbot greeting message"""
-      
+
       HelloStrings = ["How can I help you?","Hey there! It's so nice to meet you.","What's up dude!"]
-      
+      GoodbyeStrings = ["Have a nice day!","I'm going to miss you.", "Am gonna be in my room crying until I see you again"]
+
       greeting_message = random.choice(HelloStrings)
 
 
@@ -68,33 +73,48 @@ class Chatbot:
         1) extract the relevant information and
         2) transform the information into a response to the user
       """
-      
+
       WrongFormatStrings = ["I'm sorry, is that the right format? Please make sure to include the name of the movie in quotation marks.","Whoaaa, can you please make sure you use quotation marks?","Quotation marks around the movie, buddy. Please and thank you."]
       UnknownMovieStrings = ["I'm sorry, I've never heard about that movie! Please tell me about another one.","Is that some random indie film? Never heard of it!","Man, I really need to get back to the cinema. Never heard of that movie..."]
       SameMovieStrings = ["Hey! You already told me about that movie. Tell me about a different one now.", "Come on man, pick a NEW movie!", "Have you only watched 1 movie in your entire life? Pick a new one, please"]
-      
+      ConfirmationStrings = ["I think you were talking about %s. Am I right?","It probably wouldn't hurt for you to brush up on your spelling a bit. Did you mean %s?","C'mon now, you can spell better than that! Were you talking about %s?"]
+      ConfusedStrings = ["Hmmmm. Didn't quite get that one. Let's try again. Tell me about another movie!","Well this is going nowhere fast. From the top, lets try a new one!","Trying to keep me on my toes I see. How about we get back to some recommendations. Tell me about a movie you've seen!"]
+      WhatIsStrings = ["To be honest, I'm not sure I'd like to talk about %s. How about we get back to movies?", "As much as I'd love to talk about %s, I'm really here for the movies. Give me another one!", "Would you rather chat about %s or get some movie recommendations? That what I thought. Hit me with a movie!"]
+      CanYouStrings = ["I'm not big on talking about me. Lets focus on the movies.", "Can you?!? Back to the movies please.","I really appreciate how you've taken an interest in learning about me but all I really want to talk about is what you think about movies. How about one more?"]
+      ArbitraryStrings = ["Ok, got it.", "Interesting. But not as interesting as movies. Let's get back to movie recommendations!","Wow you have such a broad range of interesting topics for discussion. I'd really like to stick to movies though.","Hmmmm very interesting. How about you let me know what you thought of another movie?"]
+
       if len(input) == 0:
           return "It seems you meant to say something but forgot"
-      
+
       if len(self.recommendedMovies) > 0:
             movieRec = self.recommend(self.userRatingVector).title()
             response = random.choice(self.RecommendationStrings) % movieRec + " Tap any key to hear another recommendation. (Or enter :quit if you're done.)"
             return response
-      
+
       if self.inTheMiddleOfSentimentAnalysis:
             self.inTheMiddleOfSentimentAnalysis = False
             response = self.addRating(self.currentMovieForMoreInformation, input)
             return response
-    
+
+      if self.confirm:
+          self.confirm = False
+          match = re.match("yep|yea|yes|y$|Yep|Yea|Yes|Y$",input)
+          if match is None:
+              return random.choice(ConfusedStrings)
+          else:
+              if self.currentMovieForMoreInformation in self.ratedMovieList:
+                  return random.choice(SameMovieStrings)
+              return self.addRating(self.currentMovieForMoreInformation, self.previousInput)
+
     #Explaining this regex - checks if there are articles, checks for the year, repeats it all twice
-    
+
       matchDouble = re.match('(.*)\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\"(.*) (and|or|but|yet|neither|either|so)\,* (.*)\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\"(.*)',input)
       if matchDouble is not None:
         if matchDouble.group(2):
             movie1Name = matchDouble.group(3) + ", " + matchDouble.group(2)
         else:
             movie1Name = matchDouble.group(3)
-        
+
         if matchDouble.group(8):
             movie2Name = matchDouble.group(9) + ", " + matchDouble.group(8)
         else:
@@ -105,16 +125,16 @@ class Chatbot:
 
         if (movie1Name not in self.ratedMovieList) and (movie2Name not in self.ratedMovieList) :
             if (movie1Name in self.titlesOnly) and (movie2Name in self.titlesOnly):
-                
+
                 self.currentConjunction = matchDouble.group(6)
                 self.TwoMoviesBoolean = True
-                
+
                 input1 = matchDouble.group(1) + " " + matchDouble.group(5)
                 input2 = matchDouble.group(7) + " " + matchDouble.group(11)
-                
+
                 response1 = self.addRating(movie1Name, input1)
                 response2 = self.addRating(movie2Name, input2)
-                
+
                 return (response1 + "\n" + response2)
             else:
                 response = random.choice(UnknownMovieStrings)
@@ -122,10 +142,10 @@ class Chatbot:
         else:
             response = random.choice(SameMovieStrings)
             return response
-    
+
       match = re.match('.*\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\".*', input)
       if match is None:
-          match = re.match('.*([A-Z].*)', input)
+          match = re.match('[^A-Z]*([A-Z].*)', input)
           if match is not None:
               matchSubstr = match.group(1).lower()
               splitSubStr = matchSubstr.split()
@@ -136,7 +156,15 @@ class Chatbot:
                   if movieName in self.titlesOnly:
                       input = self.removeTitle(movieName, input)
                       return self.addRating(movieName, input)
-
+          if self.is_turbo:
+              can_you = re.match("[Cc]an you (.*)", input)
+              what_is = re.match("[Ww]hat is (.*)[\?.!]?", input)
+              if can_you is not None:
+                  return random.choice(CanYouStrings)
+              if what_is is not None:
+                  return random.choice(WhatIsStrings) % what_is.group(1)
+              else:
+                  return random.choice(ArbitraryStrings)
           return random.choice(WrongFormatStrings)
 
       if match is not None:
@@ -151,7 +179,16 @@ class Chatbot:
                 input = self.removeTitle(movieName, input)
                 return self.addRating(movieName, input)
             else:
-                response = random.choice(UnknownMovieStrings)
+                movieName = self.findPotentialMovie(movieName)
+                if movieName is None:
+                    return random.choice(UnknownMovieStrings)
+                else:
+                    self.currentMovieForMoreInformation = movieName
+                    self.confirm = True
+                    self.previousInput = input
+                    return random.choice(ConfirmationStrings) % movieName.title()
+
+
         else:
             response = random.choice(SameMovieStrings)
       else:
@@ -167,16 +204,15 @@ class Chatbot:
         strongPositive = ["love", "adore", "favorite", "amazing", "incredible", "fantastic"]
         strongNegative = ["awful", "terrible", "hate"]
         strongIntensifiers = ["really", "very", "extremely"]
-        
         confirmingConjunctionList = ["and", "or", "neither", "either", "so"]
         opposingConjunctionList = ["but","yet"]
-        
+
         strongPositiveBoolean = False
         strongNegativeBoolean = False
         strongIntensifierBoolean = False
 
         ReverseBoolean = 1
-        
+
 
         for word in string.split():
             if word in NegationWords:
@@ -187,32 +223,32 @@ class Chatbot:
                 strongNegativeBoolean = True
             if word in strongIntensifiers:
                 strongIntensifierBoolean = True
-            
+
             if self.p.stem(word) in self.sentiment:
                 if self.sentiment[self.p.stem(word)] == "pos":
                     rating += (1 * ReverseBoolean)
-                
+
                     if strongIntensifierBoolean:
                         strongPositiveBoolean = True
                         strongIntensifierBoolean = False
                 else:
                     rating -= (1 * ReverseBoolean)
-                    
+
                     if strongIntensifiers:
                         strongNegativeBoolean = True
                         strongIntensifierBoolean = False
                 ReverseBoolean = 1
-                    
+
         if rating >= 1:
             rating = 1
             strongNegativeBoolean = False
         elif rating < 0:
             rating = -1
             strongPositiveBoolean = False
-        
+
         if self.TwoMoviesBoolean and self.sentimentOfPreviousMovie == 0:
             self.sentimentOfPreviousMovie = rating
-        
+
         if rating == 0:
             if self.TwoMoviesBoolean:
                 if self.currentConjunction in confirmingConjunctionList:
@@ -249,6 +285,50 @@ class Chatbot:
         input = " ".join(inputSplit)
         return input
 
+    def minimumEditDistance(self,string, userInput, knownMovie):
+        userLen = len(userInput)
+        movieLen = len(knownMovie)
+        concat = "%s %s" % (userInput , knownMovie)
+        if userInput == knownMovie:
+            return 0
+        if userLen == 0:
+            return movieLen
+        elif movieLen == 0:
+            return userLen
+        if concat in self.check:
+            return self.check[concat]
+        else:
+            x = min(self.minimumEditDistance("first",userInput[:-1],knownMovie)+1,
+                      self.minimumEditDistance("second",knownMovie[:movieLen-1],userInput)+1,
+                      self.minimumEditDistance("third",userInput[:userLen-1], knownMovie[:movieLen-1])+self.substitution(knownMovie[movieLen-1], userInput[userLen-1]))
+            self.check[concat] = x
+            return x
+
+    def substitution(self, letterOne,letterTwo):
+        if letterOne == letterTwo:
+            return 0
+        else:
+            return 2
+
+    def findPotentialMovie(self, string):
+        start = time.time()
+        minDist = None
+        potentialMovie = None
+        for i, title in enumerate(self.titlesOnly):
+            if math.fabs(len(string) - len(title)) < 3:
+                strSet = set(string)
+                titleSet = set(title)
+                if len(strSet - titleSet) > 2 or len(titleSet - strSet) > 2: continue
+                self.check = {}
+                dist = self.minimumEditDistance("zero",string, title)
+                if (minDist is None or dist < minDist) and dist < self.distanceThreshold:
+                    minDist = dist
+                    potentialMovie = title
+                    # print potentialMovie
+                    # print minDist
+        print time.time() - start, "edit distance time"
+        return potentialMovie
+
 
     #############################################################################
     # 3. Movie Recommendation helper functions                                  #
@@ -275,16 +355,10 @@ class Chatbot:
       total = 0
       count = 0
       avg_rating = 0
-      for movie in self.ratings:
-          for rating in movie:
-            if rating != 0:
-                  total += rating
-                  count += 1
-      avg_rating = total / count
       for movie_id, movie in enumerate(self.ratings):
           for user_id, rating in enumerate(movie):
             if rating != 0:
-                self.ratings[movie_id,user_id] = 1 if rating > avg_rating else -1
+                self.ratings[movie_id,user_id] = 1 if rating > 2.5 else -1
 
 
 
@@ -369,3 +443,4 @@ class Chatbot:
 
 if __name__ == '__main__':
     Chatbot()
+    # print c.minimumEditDistance("test","sleping beauty","stealing beauty")
