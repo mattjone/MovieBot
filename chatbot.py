@@ -37,11 +37,14 @@ class Chatbot:
 
       self.inTheMiddleOfSentimentAnalysis = False
       self.currentMovieForMoreInformation = ""
+
+      self.TwoMoviesBoolean = False
+      self.currentConjunction = ""
+      self.sentimentOfPreviousMovie = 0
       self.check = {}
       self.distanceThreshold = 5
       self.confirm = False
       self.previousInput = ""
-
 
     def greeting(self):
       """chatbot greeting message"""
@@ -56,20 +59,15 @@ class Chatbot:
 
     def goodbye(self):
       """chatbot goodbye message"""
-
+      GoodbyeStrings = ["Have a nice day!","I'm going to miss you.", "Am gonna be in my room crying until I see you again"]
 
       goodbye_message = random.choice(GoodbyeStrings)
 
-
-
       return goodbye_message
 
-
-    #############################################################################
-    # 2. Modules 2 and 3: extraction and transformation                         #
-    #############################################################################
-
     def process(self, input):
+      self.TwoMoviesBoolean = False
+      self.sentimentOfPreviousMovie = 0
       """Takes the input string from the REPL and call delegated functions
       that
         1) extract the relevant information and
@@ -109,6 +107,42 @@ class Chatbot:
               return self.addRating(self.currentMovieForMoreInformation, self.previousInput)
 
     #Explaining this regex - checks if there are articles, checks for the year, repeats it all twice
+
+      matchDouble = re.match('(.*)\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\"(.*) (and|or|but|yet|neither|either|so)\,* (.*)\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\"(.*)',input)
+      if matchDouble is not None:
+        if matchDouble.group(2):
+            movie1Name = matchDouble.group(3) + ", " + matchDouble.group(2)
+        else:
+            movie1Name = matchDouble.group(3)
+
+        if matchDouble.group(8):
+            movie2Name = matchDouble.group(9) + ", " + matchDouble.group(8)
+        else:
+            movie2Name = matchDouble.group(9)
+
+        movie1Name = movie1Name.lower()
+        movie2Name = movie2Name.lower()
+
+        if (movie1Name not in self.ratedMovieList) and (movie2Name not in self.ratedMovieList) :
+            if (movie1Name in self.titlesOnly) and (movie2Name in self.titlesOnly):
+
+                self.currentConjunction = matchDouble.group(6)
+                self.TwoMoviesBoolean = True
+
+                input1 = matchDouble.group(1) + " " + matchDouble.group(5)
+                input2 = matchDouble.group(7) + " " + matchDouble.group(11)
+
+                response1 = self.addRating(movie1Name, input1)
+                response2 = self.addRating(movie2Name, input2)
+
+                return (response1 + "\n" + response2)
+            else:
+                response = random.choice(UnknownMovieStrings)
+                return response
+        else:
+            response = random.choice(SameMovieStrings)
+            return response
+
       match = re.match('.*\"(The|A|An|El|La)? *([\w ]*)( \(.*\)*)*\".*', input)
       if match is None:
           match = re.match('[^A-Z]*([A-Z].*)', input)
@@ -170,6 +204,8 @@ class Chatbot:
         strongPositive = ["love", "adore", "favorite", "amazing", "incredible", "fantastic"]
         strongNegative = ["awful", "terrible", "hate"]
         strongIntensifiers = ["really", "very", "extremely"]
+        confirmingConjunctionList = ["and", "or", "neither", "either", "so"]
+        opposingConjunctionList = ["but","yet"]
 
         strongPositiveBoolean = False
         strongNegativeBoolean = False
@@ -210,11 +246,20 @@ class Chatbot:
             rating = -1
             strongPositiveBoolean = False
 
+        if self.TwoMoviesBoolean and self.sentimentOfPreviousMovie == 0:
+            self.sentimentOfPreviousMovie = rating
+
         if rating == 0:
-            self.inTheMiddleOfSentimentAnalysis = True
-            self.currentMovieForMoreInformation = movieName
-            response = movieName.title() + "! I didn't understand if you liked it or not. Tell me more."
-            return response
+            if self.TwoMoviesBoolean:
+                if self.currentConjunction in confirmingConjunctionList:
+                    rating = self.sentimentOfPreviousMovie
+                elif self.currentConjunction in opposingConjunctionList:
+                    rating = -1 * self.sentimentOfPreviousMovie
+            else:
+                self.inTheMiddleOfSentimentAnalysis = True
+                self.currentMovieForMoreInformation = movieName
+                response = movieName.title() + "! I didn't understand if you liked it or not. Tell me more."
+                return response
 
         self.ratedMovieList[movieName] = rating
         self.userRatingVector[self.titlesOnly.index(movieName)] = rating
